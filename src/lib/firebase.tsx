@@ -11,6 +11,10 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+// Modularity
+// app is an overall app
 const app = initializeApp(firebaseConfig);
+// auth is app auth state
 export const auth = getAuth(app);
+// db is app db state
 export const db = getFirestore(app);
