@@ -9,6 +9,7 @@ import React, {
 import Tesseract from 'tesseract.js';
 import nlp from 'compromise';
 import Three from 'compromise/view/three';
+// import sharp from 'sharp';
 
 interface ReceiptDetails {
   storeName: string;
@@ -27,7 +28,7 @@ function InputImage() {
     items: [],
     totalCost: '',
   });
-  const handleImageChange = (event: any) => {
+  const handleImageChange = async (event: any) => {
     setLoading(true);
     setText('');
     setReceiptDetails(() => {
@@ -44,6 +45,8 @@ function InputImage() {
     }
     const imageUrl = URL.createObjectURL(file);
     imageRef.current = imageUrl;
+
+    // const processedImage = await preprocessImage(file);
 
     Tesseract.recognize(file, 'eng', {
       logger: (m) => {
@@ -66,6 +69,17 @@ function InputImage() {
         setLoading(false);
       });
   };
+
+  // const preprocessImage = async (file: File) => {
+  //   const buffer = await file.arrayBuffer();
+
+  //   return sharp(Buffer.from(buffer))
+  //     .resize(1000)
+  //     .grayscale()
+  //     .threshold(128)
+  //     .toBuffer();
+  // };
+
   const extractReceiptDetails = (text: string): ReceiptDetails => {
     const details: ReceiptDetails = {
       storeName: '',
@@ -122,7 +136,7 @@ function InputImage() {
       </label>
       {loading && <div>Loading...</div>}
       {!loading && <img src={imageRef.current} alt="Uploaded image" />}
-      {/* <div>Extracted Text: {text}</div> */}
+      <div>Extracted Text: {text}</div>
       <div>
         <h3>Receipt Details:</h3>
         <p>
