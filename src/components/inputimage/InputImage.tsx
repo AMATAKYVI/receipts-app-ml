@@ -1,15 +1,10 @@
-/* eslint-disable @next/next/no-img-element */
 'use client';
-import React, {
-  useState,
-  useRef,
-  DetailedHTMLProps,
-  ImgHTMLAttributes,
-} from 'react';
+
+import React, { useState, useRef, ChangeEvent } from 'react';
 import Tesseract from 'tesseract.js';
 import nlp from 'compromise';
 import Three from 'compromise/view/three';
-// import sharp from 'sharp';
+import { extractReceiptDetails } from '@/utils/extractReceiptsDetails';
 
 interface ReceiptDetails {
   storeName: string;
@@ -17,112 +12,119 @@ interface ReceiptDetails {
   items: string[];
   totalCost: string;
 }
+const preprocessText = (text: string): string => {
+  // Normalize multiple spaces and line breaks
+  return text.replace(/\s+/g, ' ').replace(/\n+/g, ' ').trim();
+};
+const preprocessImage = async (file: File): Promise<HTMLImageElement> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const reader = new FileReader();
 
-function InputImage() {
-  const imageRef = useRef<string | undefined>();
-  const [text, setText] = useState('');
-  const [loading, setLoading] = useState(false);
+    reader.onload = () => {
+      img.src = reader.result as string;
+    };
+
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject('Failed to get canvas context');
+        return;
+      }
+
+      // Resize the image
+      const scaleFactor = 2000 / img.width;
+      canvas.width = 2000;
+      canvas.height = img.height * scaleFactor;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      // Apply grayscale and threshold
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      for (let i = 0; i < data.length; i += 4) {
+        // Convert to grayscale
+        const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+        data[i] = avg; // Red
+        data[i + 1] = avg; // Green
+        data[i + 2] = avg; // Blue
+        // Apply threshold
+        data[i] = data[i] > 128 ? 255 : 0; // Red
+        data[i + 1] = data[i + 1] > 128 ? 255 : 0; // Green
+        data[i + 2] = data[i + 2] > 128 ? 255 : 0; // Blue
+      }
+      ctx.putImageData(imageData, 0, 0);
+
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const processedImage = new Image();
+          processedImage.src = URL.createObjectURL(blob);
+          processedImage.onload = () => resolve(processedImage);
+          processedImage.onerror = reject;
+        } else {
+          reject('Failed to create blob');
+        }
+      }, 'image/png');
+    };
+
+    reader.readAsDataURL(file);
+  });
+};
+
+const InputImage: React.FC = () => {
+  const [text, setText] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
   const [receiptDetails, setReceiptDetails] = useState<ReceiptDetails>({
     storeName: '',
     date: '',
     items: [],
     totalCost: '',
   });
-  const handleImageChange = async (event: any) => {
+  const [imageUrl, setImageUrl] = useState<string | undefined>();
+
+  const handleImageChange = async (event: ChangeEvent<HTMLInputElement>) => {
     setLoading(true);
     setText('');
-    setReceiptDetails(() => {
-      return {
-        storeName: '',
-        date: '',
-        items: [],
-        totalCost: '',
-      };
-    });
-    const file = event.target.files[0];
-    if (!file) {
-      return;
-    }
-    const imageUrl = URL.createObjectURL(file);
-    imageRef.current = imageUrl;
-
-    // const processedImage = await preprocessImage(file);
-
-    Tesseract.recognize(file, 'eng', {
-      logger: (m) => {
-        // console.log(m);
-      },
-    })
-      .then(({ data: { text } }) => {
-        let doc = nlp(text);
-        doc = doc.normalize() as Three;
-        const validText = doc.text();
-
-        //extract receipts
-        const details = extractReceiptDetails(validText);
-        setReceiptDetails(details);
-        setText(validText);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setLoading(false);
-      });
-  };
-
-  // const preprocessImage = async (file: File) => {
-  //   const buffer = await file.arrayBuffer();
-
-  //   return sharp(Buffer.from(buffer))
-  //     .resize(1000)
-  //     .grayscale()
-  //     .threshold(128)
-  //     .toBuffer();
-  // };
-
-  const extractReceiptDetails = (text: string): ReceiptDetails => {
-    const details: ReceiptDetails = {
+    setReceiptDetails({
       storeName: '',
       date: '',
       items: [],
       totalCost: '',
-    };
+    });
 
-    const lines = text.split('\n');
+    try {
+      const file = event.target.files?.[0];
+      if (!file) return;
 
-    // need to extend this logic
-    const storeNamePattern = /(Walmart|Target|Costco|OtherStores...)/i;
-    const datePattern = /(\d{1,2}\/\d{1,2}\/\d{2,4})/;
-    const totalCostPattern = /(?<!SUB)TOTAL\s+(\d+\.\d{2})/i;
-    const itemPattern = /^[A-Za-z\s]+\s+\d+\.\d{2}$/;
+      const processedImage = await preprocessImage(file);
+      setImageUrl(processedImage.src);
 
-    for (let line of lines) {
-      // Find store name
-      if (!details.storeName && storeNamePattern.test(line)) {
-        const match = line.match(storeNamePattern);
-        details.storeName = match ? match[0] : '';
-      }
-      // Find date
-      if (!details.date && datePattern.test(line)) {
-        const match = line.match(datePattern);
-        details.date = match ? match[0] : '';
-      }
-      // Find total cost
-      if (totalCostPattern.test(line)) {
-        const cleanLine = line.replace(/\s+/g, ' ').trim();
+      Tesseract.recognize(processedImage, 'eng', {
+        logger: (m) => {
+          // console.log(m);
+        },
+      })
+        .then(({ data: { text } }) => {
+          let doc = nlp(text);
+          doc = doc.normalize() as Three;
+          const validText = doc.text();
 
-        const match = cleanLine.match(totalCostPattern);
-        if (match && match[1]) {
-          details.totalCost = match[1];
-        }
-      }
-      // Find items
-      if (itemPattern.test(line)) {
-        details.items.push(line.trim());
-      }
+          // Extract receipt details
+          const validTextX = preprocessText(text);
+          const details = extractReceiptDetails(validText);
+          setReceiptDetails(details);
+          setText(validText);
+        })
+        .catch((err) => {
+          console.error(err);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    } catch (error) {
+      console.error(error);
+      setLoading(false);
     }
-
-    return details;
   };
   return (
     <div>
@@ -135,7 +137,13 @@ function InputImage() {
         />
       </label>
       {loading && <div>Loading...</div>}
-      {!loading && <img src={imageRef.current} alt="Uploaded image" />}
+      {imageUrl && !loading && (
+        <img
+          src={imageUrl}
+          className="w-[300px] h-[400px] object-contain"
+          alt="Uploaded image"
+        />
+      )}
       <div>Extracted Text: {text}</div>
       <div>
         <h3>Receipt Details:</h3>
@@ -149,15 +157,15 @@ function InputImage() {
           <strong>Total Cost:</strong> {receiptDetails.totalCost}
         </p>
         <h4>Items:</h4>
+        <div className="">{receiptDetails.items.length}</div>
         <ul>
           {receiptDetails.items.map((item, index) => (
             <li key={index}>{item}</li>
           ))}
         </ul>
-      </div>{' '}
+      </div>
     </div>
   );
-}
-const dictionary = ['Walmart', 'Target', 'Receipt', 'Total', 'Amount']; // Add relevant words
+};
 
 export default InputImage;
