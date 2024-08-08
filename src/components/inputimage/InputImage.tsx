@@ -1,41 +1,42 @@
+/* eslint-disable @next/next/no-img-element */
 'use client';
-import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import React, { useState, useRef } from 'react';
-// import * as cocoSsd from '@tensorflow-models/coco-ssd';
+import React, {
+  useState,
+  useRef,
+  DetailedHTMLProps,
+  ImgHTMLAttributes,
+} from 'react';
 import Tesseract from 'tesseract.js';
-// import '@tensorflow/tfjs';
-function InputImage() {
-  const [predictions, setPredictions] = useState([]);
-  const imageRef = useRef(null);
-  const [text, setText] = useState('');
+import nlp from 'compromise';
+import Three from 'compromise/view/three';
 
+function InputImage() {
+  const imageRef = useRef<string | undefined>();
+  const [text, setText] = useState('');
+  const [loading, setLoading] = useState(false);
   const handleImageChange = (event: any) => {
+    setLoading(true);
     const file = event.target.files[0];
     if (!file) {
       return;
     }
+    const imageUrl = URL.createObjectURL(file);
+    imageRef.current = imageUrl;
     Tesseract.recognize(file, 'eng', {
       logger: (m) => console.log(m),
     })
       .then(({ data: { text } }) => {
-        //   let words = text.split(/\s+/); // Split text into words
-        // words = words.filter(word => dictionary.includes(word)); // Keep only valid words
-        // const validText = words.join(' ');
-
-        // setText(validText); let words = text.split(/\s+/); // Split text into words
-        // words = words.filter(word => dictionary.includes(word)); // Keep only valid words
-        // const validText = words.join(' ');
-
-        // setText(validText);
-
-        let validText = text.replace(/[^a-zA-Z0-9\s.,-]/g, '');
-
-        validText = validText.replace(/\b0\b/g, 'O').replace(/\b1\b/g, 'I');
+        let doc = nlp(text);
+        doc = doc.normalize() as Three;
+        const validText = doc.text();
 
         setText(validText);
+        setLoading(false);
       })
-      .catch((err) => console.error('Error recognizing text:', err));
+      .catch((err) => {
+        console.error(err);
+        setLoading(false);
+      });
   };
   return (
     <div>
@@ -47,9 +48,8 @@ function InputImage() {
           onChange={handleImageChange}
         />
       </label>
-
-      <Image src={`${imageRef}`} alt="Uploaded receipt" />
-
+      {loading && <div>Loading...</div>}
+      {!loading && <img src={imageRef.current} alt="Uploaded image" />}
       <div>{text}</div>
     </div>
   );
