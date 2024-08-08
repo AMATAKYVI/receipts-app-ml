@@ -1,4 +1,4 @@
-import InputImage from '@/components/InputImage';
+import InputImage from '@/components/inputimage/InputImage';
 import Image from 'next/image';
 
 export default function Home() {
