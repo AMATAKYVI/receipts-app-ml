@@ -29,6 +29,15 @@ function InputImage() {
   });
   const handleImageChange = (event: any) => {
     setLoading(true);
+    setText('');
+    setReceiptDetails(() => {
+      return {
+        storeName: '',
+        date: '',
+        items: [],
+        totalCost: '',
+      };
+    });
     const file = event.target.files[0];
     if (!file) {
       return;
@@ -70,7 +79,7 @@ function InputImage() {
     // need to extend this logic
     const storeNamePattern = /(Walmart|Target|Costco|OtherStores...)/i;
     const datePattern = /(\d{1,2}\/\d{1,2}\/\d{2,4})/;
-    const totalCostPattern = /Total\s+\$?(\d+\.\d{2})/;
+    const totalCostPattern = /(?<!SUB)TOTAL\s+(\d+\.\d{2})/i;
     const itemPattern = /^[A-Za-z\s]+\s+\d+\.\d{2}$/;
 
     for (let line of lines) {
@@ -85,9 +94,13 @@ function InputImage() {
         details.date = match ? match[0] : '';
       }
       // Find total cost
-      if (!details.totalCost && totalCostPattern.test(line)) {
-        const match = line.match(totalCostPattern);
-        details.totalCost = match ? match[1] : '';
+      if (totalCostPattern.test(line)) {
+        const cleanLine = line.replace(/\s+/g, ' ').trim();
+
+        const match = cleanLine.match(totalCostPattern);
+        if (match && match[1]) {
+          details.totalCost = match[1];
+        }
       }
       // Find items
       if (itemPattern.test(line)) {
@@ -109,7 +122,7 @@ function InputImage() {
       </label>
       {loading && <div>Loading...</div>}
       {!loading && <img src={imageRef.current} alt="Uploaded image" />}
-      <div>Extracted Text: {text}</div>
+      {/* <div>Extracted Text: {text}</div> */}
       <div>
         <h3>Receipt Details:</h3>
         <p>
