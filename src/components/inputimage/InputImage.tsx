@@ -63,6 +63,11 @@ const InputImage: React.FC = () => {
           alt="Uploaded image"
         />
       )}
+      {receiptDetails.items.length < 0 ? (
+        <div className="">asd</div>
+      ) : (
+        <div>asd</div>
+      )}
       <div>Extracted Text: {text}</div>
       <div>
         <h3>Receipt Details:</h3>

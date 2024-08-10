@@ -1,10 +1,9 @@
-import InputImage from '@/components/inputimage/InputImage';
-import Image from 'next/image';
+import DashBoard from '@/components/dashboard/DashBoard';
 
 export default function Home() {
   return (
     <main className="text-center p-10">
-      <InputImage />
+      <DashBoard />
     </main>
   );
 }
