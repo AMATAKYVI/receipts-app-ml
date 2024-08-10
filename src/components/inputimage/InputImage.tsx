@@ -1,93 +1,70 @@
 'use client';
 
-import React, { useState, ChangeEvent } from 'react';
-import { extractReceiptDetails } from '@/utils/extractReceiptsDetails';
-import { ReceiptDetails } from '@/types/ReceiptDetails';
-import { preprocessImage } from '@/utils/imagePreprocessing';
-import { extractTextFromImage } from '@/utils/ocr';
+import { detectObjects } from '@/utils/objectDetecton';
+import React, { FC, ChangeEvent, useState } from 'react';
+interface InputImageProps {}
 
-const InputImage: React.FC = () => {
-  const [text, setText] = useState<string>('');
+const InputImage: FC<InputImageProps> = ({}) => {
+  const [detectedObjects, setDetectedObjects] = useState<string[]>([]);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
-  const [receiptDetails, setReceiptDetails] = useState<ReceiptDetails>({
-    storeName: '',
-    date: '',
-    items: [],
-    totalCost: '',
-  });
-  const [imageUrl, setImageUrl] = useState<string | undefined>();
+  const [error, setError] = useState<string | null>(null);
 
   const handleImageChange = async (event: ChangeEvent<HTMLInputElement>) => {
     setLoading(true);
-    setText('');
-    setReceiptDetails({
-      storeName: '',
-      date: '',
-      items: [],
-      totalCost: '',
-    });
+    setDetectedObjects([]);
+    setImageUrl(null);
+    setError(null);
 
     try {
       const file = event.target.files?.[0];
       if (!file) return;
 
-      const processedImage = await preprocessImage(file);
-      setImageUrl(processedImage.src);
+      const url = URL.createObjectURL(file);
+      setImageUrl(url);
 
-      const text = await extractTextFromImage(processedImage);
-      const details = extractReceiptDetails(text);
-      setReceiptDetails(details);
-      setText(text);
+      // Load the image
+      const image = new Image();
+      image.src = url;
+      image.onload = async () => {
+        // Detect objects in the image
+        const detectedObjects = await detectObjects(image);
+        setDetectedObjects(detectedObjects);
+      };
     } catch (error) {
       console.error(error);
-      setLoading(false);
+      setError('An error occurred while processing the image.');
     } finally {
       setLoading(false);
     }
   };
+  console.log(detectedObjects);
   return (
-    <div>
-      <label htmlFor="insert-image">
+    <div className="">
+      <label htmlFor="upload-image">
         <input
           type="file"
-          id="insert-image"
+          id="upload-image"
           accept="image/*"
           onChange={handleImageChange}
+          aria-label="Upload Image"
         />
       </label>
       {loading && <div>Loading...</div>}
+      {error && <div className="text-red-500">{error}</div>}
       {imageUrl && !loading && (
-        <img
-          src={imageUrl}
-          className="w-[300px] h-[400px] object-contain"
-          alt="Uploaded image"
-        />
+        <div>
+          <img src={imageUrl} alt="Uploaded" className="w-[300px] h-[400px]" />
+          <div className="mt-4">
+            <h3>Detected Objects:</h3>
+            <ul>
+              {detectedObjects.map((object, index) => (
+                <li key={index}>{object}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
       )}
-      {receiptDetails.items.length < 0 ? (
-        <div className="">asd</div>
-      ) : (
-        <div>asd</div>
-      )}
-      <div>Extracted Text: {text}</div>
-      <div>
-        <h3>Receipt Details:</h3>
-        <p>
-          <strong>Store Name:</strong> {receiptDetails.storeName}
-        </p>
-        <p>
-          <strong>Date:</strong> {receiptDetails.date}
-        </p>
-        <p>
-          <strong>Total Cost:</strong> {receiptDetails.totalCost}
-        </p>
-        <h4>Items:</h4>
-        <div className="">{receiptDetails.items.length}</div>
-        <ul>
-          {receiptDetails.items.map((item, index) => (
-            <li key={index}>{item}</li>
-          ))}
-        </ul>
-      </div>
     </div>
   );
 };
