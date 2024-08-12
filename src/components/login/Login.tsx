@@ -4,7 +4,7 @@ interface LoginProps {}
 
 const Login: FC<LoginProps> = ({}) => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 h-screen">
+    <div className="grid grid-cols-1 lg:grid-cols-2 h-screen">
       {/* Login form here */}
       <div className=" flex flex-col justify-between p-4">
         <div className="flex justify-between items-center">
@@ -65,21 +65,24 @@ const Login: FC<LoginProps> = ({}) => {
             </button>
           </form>
         </div>
-        <div className="text-center pb-2 text-sm">
+        <div className="text-center pb-2 text-sm mt-3">
           Need an account?
           <span className="font-semibold ml-2">Sign up here</span>
         </div>
       </div>
       {/* login banner here */}
-      <div className=" relative">
+      <div className="relative">
         {/* background image */}
         <img
           src="/banner_3.jpg"
           alt=""
-          className="object-contain h-full w-full"
+          className="object-cover h-full w-full"
         />
-        <div className="absolute bottom-4 left-4 text-white font-semibold">
-          Checkout more
+        <div className="absolute bottom-[30%] left-4 right-4 bg-gray-200 bg-opacity-50 backdrop-blur-sm rounded-lg text-white font-semibold p-4">
+          <p className="text-5xl">
+            Short cut your work, with our pdf ai and more.
+          </p>
+          <p>Summarize your pdf file below 30 seconds</p>
         </div>
       </div>
     </div>
