@@ -7,9 +7,8 @@ interface SidebarProps {}
 const Sidebar: FC<SidebarProps> = ({}) => {
   const pathname = usePathname();
   const router = useRouter();
-  const [activeIndex, setActiveIndex] = useState<number | null>();
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const items = [
     { name: 'Home', icon: <HomeIcon />, path: '/' },
     { name: 'Receipt Scanner', icon: <ScannerIcon />, path: '/scanner' },
@@ -21,32 +20,48 @@ const Sidebar: FC<SidebarProps> = ({}) => {
     setActiveIndex(index);
     router.push(path);
   };
+
   useEffect(() => {
-    // Check if the current path matches any item and set the active index
     const activeItem = items.findIndex(
       (item) =>
         item.path === pathname || (item.path === '/' && pathname === '/home')
     );
     setActiveIndex(activeItem !== -1 ? activeItem : null);
   }, [pathname]);
+
   return (
-    <div className="hidden sm:w-[30%] lg:w-[20%] xl:w-[15%] border h-screen md:flex flex-col justify-between p-5">
+    <div className="bg-blue-800 text-white hidden sm:w-[25%] lg:w-[20%] xl:w-[15%] border-r border-gray-700 h-screen md:flex flex-col justify-between">
       <div>
-        <div className="text-2xl font-semibold mb-10">Scanner</div>
+        <div className="text-2xl font-semibold mb-10 p-5">Scanner</div>
         <div className="flex flex-col gap-10">
+          <p className="px-5 uppercase text-gray-400">Menu</p>
           {items.map((item, index) => (
             <div
               key={index}
-              className={`flex gap-2 cursor-pointer transform duration-300 transition-all ${
-                activeIndex === index ? 'text-blue-500' : 'text-gray-700'
+              className={`relative flex gap-2 cursor-pointer transform transition-all duration-500 px-2 py-3 rounded-md ${
+                activeIndex === index
+                  ? 'bg-blue-700 text-white border-l-4 border-blue-400'
+                  : 'text-gray-300 hover:text-white hover:bg-blue-600'
               }`}
               onClick={() => handleItemClick(index, item.path)}
             >
               <div className="h-5 w-5">{item.icon}</div>
-              <span>{item.name}</span>
+              <span className="transition-colors duration-300 ease-in-out">
+                {item.name}
+              </span>
+              {activeIndex === index && (
+                <div className="absolute left-0 top-0 w-1 h-full bg-blue-400 rounded-r-md"></div>
+              )}
             </div>
           ))}
         </div>
+      </div>
+      <div className="text-center p-5 border-t border-gray-700">
+        <hr className="mb-5" />
+        <button className="bg-white text-blue-800 px-5 py-2 rounded-full hover:bg-gray-100 transition">
+          Logout
+        </button>
+        <div className="text-xs mt-2 text-gray-400">v1.0.0</div>
       </div>
     </div>
   );

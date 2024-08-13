@@ -1,10 +1,13 @@
-import DashBoard from '@/components/dashboard/DashBoard';
-import Login from '@/components/login/Login';
+import MainBoard from '@/components/homeboard/MainBoard';
+import Sidebar from '@/components/sidebar/Sidebar';
 
 export default function Home() {
   return (
-    <main className="">
-      <DashBoard />
+    <main className="block sm:flex h-screen overflow-hidden">
+      <Sidebar />
+      <div className="flex-1 overflow-auto">
+        <MainBoard />
+      </div>
       {/* <Login /> */}
     </main>
   );
